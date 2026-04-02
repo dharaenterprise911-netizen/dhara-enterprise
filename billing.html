@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dhara Enterprise | Easy Billing</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #0f172a; --accent: #2563eb; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); display: flex; }
+        .sidebar { width: 240px; background: var(--primary); color: white; height: 100vh; position: fixed; padding: 30px 20px; box-sizing: border-box; }
+        .sidebar h1 { font-size: 1.2rem; color: #38bdf8; margin-bottom: 40px; border-bottom: 1px solid #334155; padding-bottom: 20px; }
+        .nav-link { display: block; color: #94a3b8; text-decoration: none; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+        .nav-link:hover, .nav-link.active { background: var(--accent); color: white; }
+        .main-content { margin-left: 240px; padding: 40px; width: 100%; display: flex; justify-content: center; }
+        .bill-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+        .btn-print { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h1>DHARA <br>ENTERPRISE</h1>
+    <a href="index.html" class="nav-link"><i class="fas fa-warehouse"></i> Stock Master</a>
+    <a href="billing.html" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> Easy Billing</a>
+</div>
+
+<div class="main-content">
+    <div class="bill-card">
+        <h2 style="text-align:center; margin-top:0;">Quick Receipt</h2>
+        <label>Customer Name</label>
+        <input type="text" id="cName" placeholder="Client Name">
+        <label>Product Name</label>
+        <input type="text" id="iName" placeholder="Item sold">
+        <div style="display:flex; gap:10px;">
+            <div><label>Qty</label><input type="number" id="iQty" value="1"></div>
+            <div><label>Rate (₹)</label><input type="number" id="iRate" placeholder="0"></div>
+        </div>
+        <button class="btn-print" onclick="printBill()">Print Receipt</button>
+    </div>
+</div>
+
+<script>
+    function printBill() {
+        const name = document.getElementById('cName').value || "Cash Customer";
+        const item = document.getElementById('iName').value;
+        const qty = parseFloat(document.getElementById('iQty').value);
+        const rate = parseFloat(document.getElementById('iRate').value);
+        const total = qty * rate;
+
+        const win = window.open('', '_blank');
+        win.document.write(`
+            <html><body style="font-family:monospace; width:300px; margin:auto; padding:20px; border:1px solid #ddd;">
+                <h2 style="text-align:center">DHARA ENTERPRISE</h2>
+                <hr>
+                <p>Date: ${new Date().toLocaleDateString()}</p>
+                <p>To: ${name}</p>
+                <hr>
+                <p><b>${item}</b></p>
+                <p>${qty} x ₹${rate} = <b>₹${total}</b></p>
+                <hr>
+                <h3 style="text-align:right">TOTAL: ₹${total}</h3>
+                <center><button onclick="window.print()">Print</button></center>
+            </body></html>
+        `);
+    }
+</script>
+</body>
+</html>
