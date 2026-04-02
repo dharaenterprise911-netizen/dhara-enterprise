@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dhara Enterprise | Inventory & Billing</title>
+    <title>Dhara Enterprise | GST Billing & Inventory</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 20px; background-color: #f4f7f6; color: #333; }
         header { text-align: center; padding: 25px; background: #2c3e50; color: white; border-radius: 8px; margin-bottom: 20px; }
@@ -14,13 +14,12 @@
         .stat-value { font-size: 1.8rem; font-weight: bold; color: #27ae60; }
 
         .form-section { background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px; }
-        .input-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        input, select { padding: 12px; border: 1px solid #ccc; border-radius: 6px; flex: 1; min-width: 120px; font-size: 1rem; }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+        input, select { padding: 12px; border: 1px solid #ccc; border-radius: 6px; flex: 1; min-width: 140px; font-size: 1rem; }
         
         .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
-        .btn-add { background: #27ae60; color: white; }
-        .btn-bill { background: #8e44ad; color: white; padding: 5px 10px; margin-right: 5px; }
-        .btn-edit { background: #3498db; color: white; padding: 5px 10px; margin-right: 5px; }
+        .btn-add { background: #27ae60; color: white; width: 100%; margin-top: 10px; }
+        .btn-bill { background: #8e44ad; color: white; padding: 5px 10px; }
         .btn-delete { background: #e74c3c; color: white; padding: 5px 10px; }
         
         #searchInput { width: 100%; padding: 12px; margin: 20px 0; border: 2px solid #3498db; border-radius: 6px; box-sizing: border-box; }
@@ -28,55 +27,52 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         th { background-color: #f8f9fa; color: #7f8c8d; text-transform: uppercase; font-size: 0.8rem; }
-        .badge { background: #ebf5fb; color: #2980b9; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Dhara Enterprise</h1>
-    <p>Inventory & GST Billing Portal</p>
+    <p>Inventory, Stock & GST Compliance Portal</p>
 </header>
 
 <div class="container">
     <div class="dashboard-grid">
         <div class="stat-card">
-            <div>Total Value (Excl. GST)</div>
+            <div>Stock Value</div>
             <div class="stat-value" id="totalValue">₹0</div>
         </div>
         <div class="stat-card">
-            <div>Items in Stock</div>
+            <div>Total Quantity</div>
             <div class="stat-value" id="itemCount">0</div>
         </div>
     </div>
 
     <div class="form-section">
-        <h3 id="formTitle">Manage Inventory</h3>
+        <h3>Manage Inventory Item</h3>
         <div class="input-group">
             <input type="hidden" id="editIndex">
             <input type="text" id="itemName" placeholder="Item Name">
-            <input type="number" id="itemQty" placeholder="Qty" min="1">
-            <input type="number" id="itemPrice" placeholder="Price per Unit (₹)">
+            <input type="number" id="itemQty" placeholder="Quantity">
+            <input type="number" id="itemPrice" placeholder="Unit Price (₹)">
             <select id="itemCategory">
                 <option value="General">General</option>
                 <option value="Electronics">Electronics</option>
-                <option value="Furniture">Furniture</option>
                 <option value="Stationery">Stationery</option>
             </select>
-            <button id="addBtn" class="btn btn-add" onclick="saveItem()">+ Save Item</button>
         </div>
+        <button class="btn btn-add" onclick="saveItem()">Save to Inventory</button>
     </div>
 
-    <input type="text" id="searchInput" onkeyup="filterItems()" placeholder="Search inventory...">
+    <input type="text" id="searchInput" onkeyup="filterItems()" placeholder="Search items...">
 
     <table id="itemTable">
         <thead>
             <tr>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Rate</th>
-                <th>Total</th>
-                <th>Actions</th>
+                <th>Item Details</th>
+                <th>Stock</th>
+                <th>Unit Rate</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -84,7 +80,6 @@
 </div>
 
 <script>
-    let editMode = false;
     window.onload = displayItems;
 
     function saveItem() {
@@ -92,149 +87,111 @@
         const qty = parseInt(document.getElementById('itemQty').value);
         const price = parseFloat(document.getElementById('itemPrice').value);
         const category = document.getElementById('itemCategory').value;
-        const index = document.getElementById('editIndex').value;
 
         if (!name || isNaN(qty) || isNaN(price)) {
-            alert("Please enter valid details.");
-            return;
+            alert("Please fill all item details."); return;
         }
 
         let items = JSON.parse(localStorage.getItem('dhara_items')) || [];
-        const itemData = { name, qty, price, category };
-
-        if (editMode) {
-            items[index] = itemData;
-            editMode = false;
-        } else {
-            items.push(itemData);
-        }
-
+        items.push({ name, qty, price, category });
         localStorage.setItem('dhara_items', JSON.stringify(items));
-        resetForm();
+        
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemQty').value = '';
+        document.getElementById('itemPrice').value = '';
         displayItems();
     }
 
     function displayItems() {
         const items = JSON.parse(localStorage.getItem('dhara_items')) || [];
         const tableBody = document.getElementById('tableBody');
-        const totalDisplay = document.getElementById('totalValue');
-        const countDisplay = document.getElementById('itemCount');
-        
+        let grandTotal = 0; let totalQty = 0;
         tableBody.innerHTML = '';
-        let grandTotal = 0;
-        let totalQty = 0;
 
         items.forEach((item, index) => {
-            const lineTotal = item.qty * item.price;
-            grandTotal += lineTotal;
+            grandTotal += (item.qty * item.price);
             totalQty += item.qty;
-            
             tableBody.innerHTML += `
                 <tr>
-                    <td><strong>${item.name}</strong><br><small class="badge">${item.category}</small></td>
+                    <td><strong>${item.name}</strong><br><small>${item.category}</small></td>
                     <td>${item.qty}</td>
                     <td>₹${item.price.toLocaleString()}</td>
-                    <td>₹${lineTotal.toLocaleString()}</td>
                     <td>
-                        <button class="btn btn-bill" onclick="generateBill(${index})">GST Bill</button>
-                        <button class="btn btn-edit" onclick="startEdit(${index})">Edit</button>
+                        <button class="btn btn-bill" onclick="promptBillDetails(${index})">Generate Bill</button>
                         <button class="btn btn-delete" onclick="deleteItem(${index})">Delete</button>
                     </td>
                 </tr>`;
         });
-
-        totalDisplay.innerText = "₹" + grandTotal.toLocaleString();
-        countDisplay.innerText = totalQty;
+        document.getElementById('totalValue').innerText = "₹" + grandTotal.toLocaleString();
+        document.getElementById('itemCount').innerText = totalQty;
     }
 
-    function generateBill(index) {
-        const items = JSON.parse(localStorage.getItem('dhara_items'));
-        const item = items[index];
-        const subtotal = item.qty * item.price;
-        const gst = subtotal * 0.18;
-        const finalTotal = subtotal + gst;
+    function promptBillDetails(index) {
+        const customer = prompt("Enter Customer Name:", "Valued Customer");
+        const date = prompt("Enter Date:", new Date().toLocaleDateString());
+        const gstType = prompt("Type 'GST' for CGST+SGST or 'IGST' for Inter-state:", "GST");
+        const gstRate = prompt("Enter GST % (e.g. 5, 12, 18):", "18");
 
-        const billWindow = window.open('', '_blank', 'width=600,height=700');
-        billWindow.document.write(`
-            <html>
-            <head><title>Dhara Enterprise Invoice</title>
-            <style>
-                body { font-family: sans-serif; padding: 40px; line-height: 1.6; }
-                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
-                .bill-info { margin: 20px 0; }
+        if (customer && gstRate) {
+            generateBill(index, customer, date, gstType, parseFloat(gstRate));
+        }
+    }
+
+    function generateBill(index, customer, date, gstType, rate) {
+        const item = JSON.parse(localStorage.getItem('dhara_items'))[index];
+        const subtotal = item.qty * item.price;
+        const totalTax = subtotal * (rate / 100);
+        const grandTotal = subtotal + totalTax;
+
+        let taxBreakdown = "";
+        if (gstType.toUpperCase() === "IGST") {
+            taxBreakdown = `<p>IGST (${rate}%): ₹${totalTax.toFixed(2)}</p>`;
+        } else {
+            const halfRate = rate / 2;
+            const halfTax = totalTax / 2;
+            taxBreakdown = `<p>CGST (${halfRate}%): ₹${halfTax.toFixed(2)}</p><p>SGST (${halfRate}%): ₹${halfTax.toFixed(2)}</p>`;
+        }
+
+        const billWin = window.open('', '_blank');
+        billWin.document.write(`
+            <html><head><style>
+                body { font-family: sans-serif; padding: 30px; border: 1px solid #eee; max-width: 800px; margin: auto; }
+                .header { text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
                 table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-                .total-section { text-align: right; margin-top: 20px; }
-                .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #777; }
+                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                .right { text-align: right; }
+                .footer { margin-top: 30px; font-size: 12px; text-align: center; color: #666; }
                 @media print { .no-print { display: none; } }
-            </style>
-            </head>
+            </style></head>
             <body>
-                <div class="header">
-                    <h1>DHARA ENTERPRISE</h1>
-                    <p>Tax Invoice / Bill of Supply</p>
-                </div>
-                <div class="bill-info">
-                    <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
-                    <strong>Invoice No:</strong> DE-${Math.floor(1000 + Math.random() * 9000)}
-                </div>
+                <div class="header"><h1>DHARA ENTERPRISE</h1><p>TAX INVOICE</p></div>
+                <p><strong>Customer:</strong> ${customer} | <strong>Date:</strong> ${date}</p>
                 <table>
-                    <thead>
-                        <tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>${item.name} (${item.category})</td><td>${item.qty}</td><td>₹${item.price}</td><td>₹${subtotal}</td></tr>
-                    </tbody>
+                    <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead>
+                    <tbody><tr><td>${item.name}</td><td>${item.qty}</td><td>₹${item.price}</td><td>₹${subtotal}</td></tr></tbody>
                 </table>
-                <div class="total-section">
+                <div class="right">
                     <p>Subtotal: ₹${subtotal.toLocaleString()}</p>
-                    <p>GST (18%): ₹${gst.toLocaleString()}</p>
-                    <hr>
-                    <h3>Grand Total: ₹${finalTotal.toLocaleString()}</h3>
+                    ${taxBreakdown}
+                    <hr><h3>Grand Total: ₹${grandTotal.toLocaleString()}</h3>
                 </div>
-                <div class="footer">
-                    <p>Thank you for your business!</p>
-                    <button class="no-print" onclick="window.print()">Print Invoice</button>
-                </div>
-            </body>
-            </html>
+                <div class="footer"><p>Authorized Signatory</p><br><br><button class="no-print" onclick="window.print()">Print/Save PDF</button></div>
+            </body></html>
         `);
     }
 
-    function startEdit(index) {
-        const items = JSON.parse(localStorage.getItem('dhara_items'));
-        const item = items[index];
-        document.getElementById('itemName').value = item.name;
-        document.getElementById('itemQty').value = item.qty;
-        document.getElementById('itemPrice').value = item.price;
-        document.getElementById('editIndex').value = index;
-        editMode = true;
-        document.getElementById('addBtn').innerText = "Update Item";
-    }
-
-    function resetForm() {
-        document.getElementById('itemName').value = '';
-        document.getElementById('itemQty').value = '';
-        document.getElementById('itemPrice').value = '';
-        editMode = false;
-        document.getElementById('addBtn').innerText = "+ Save Item";
-    }
-
     function deleteItem(index) {
-        if(confirm("Delete this item?")) {
-            let items = JSON.parse(localStorage.getItem('dhara_items'));
-            items.splice(index, 1);
-            localStorage.setItem('dhara_items', JSON.stringify(items));
-            displayItems();
-        }
+        let items = JSON.parse(localStorage.getItem('dhara_items'));
+        items.splice(index, 1);
+        localStorage.setItem('dhara_items', JSON.stringify(items));
+        displayItems();
     }
 
     function filterItems() {
         const input = document.getElementById('searchInput').value.toLowerCase();
         const rows = document.getElementById('tableBody').getElementsByTagName('tr');
         for (let row of rows) {
-            const text = row.innerText.toLowerCase();
-            row.style.display = text.includes(input) ? "" : "none";
+            row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
         }
     }
 </script>
