@@ -3,19 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dhara Enterprise | Easy Billing</title>
+    <title>Dhara Enterprise | Smart Billing</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --primary: #0f172a; --accent: #2563eb; --bg: #f8fafc; }
         body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); display: flex; }
+        
         .sidebar { width: 240px; background: var(--primary); color: white; height: 100vh; position: fixed; padding: 30px 20px; box-sizing: border-box; }
         .sidebar h1 { font-size: 1.2rem; color: #38bdf8; margin-bottom: 40px; border-bottom: 1px solid #334155; padding-bottom: 20px; }
-        .nav-link { display: block; color: #94a3b8; text-decoration: none; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
-        .nav-link:hover, .nav-link.active { background: var(--accent); color: white; }
+        .nav-link { display: block; color: #94a3b8; text-decoration: none; padding: 12px; border-radius: 8px; margin-bottom: 10px; transition: 0.3s; }
+        .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-link.active { background: var(--accent); color: white; }
+
         .main-content { margin-left: 240px; padding: 40px; width: 100%; display: flex; justify-content: center; }
-        .bill-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
-        .btn-print { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .bill-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 500px; border: 1px solid #e2e8f0; }
+        
+        label { display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 8px; text-transform: uppercase; margin-top: 15px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; background: #fdfdfd; }
+        input:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+        .btn-print { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; margin-top: 25px; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
+        .btn-print:hover { background: #1d4ed8; transform: translateY(-1px); }
     </style>
 </head>
 <body>
@@ -28,41 +36,105 @@
 
 <div class="main-content">
     <div class="bill-card">
-        <h2 style="text-align:center; margin-top:0;">Quick Receipt</h2>
+        <h2 style="text-align:center; margin-top:0; color: var(--primary);">Quick Receipt</h2>
+        
         <label>Customer Name</label>
-        <input type="text" id="cName" placeholder="Client Name">
-        <label>Product Name</label>
-        <input type="text" id="iName" placeholder="Item sold">
-        <div style="display:flex; gap:10px;">
-            <div><label>Qty</label><input type="number" id="iQty" value="1"></div>
-            <div><label>Rate (₹)</label><input type="number" id="iRate" placeholder="0"></div>
+        <input type="text" id="cName" placeholder="Enter Client Name">
+
+        <label>Select Saved Item (From Stock Master)</label>
+        <select id="itemSelect" onchange="updatePrice()">
+            <option value="">-- Choose an Item --</option>
+            </select>
+
+        <div style="display:flex; gap:15px; margin-top:10px;">
+            <div style="flex:1;">
+                <label>Quantity</label>
+                <input type="number" id="iQty" value="1" min="1">
+            </div>
+            <div style="flex:1;">
+                <label>Rate (₹)</label>
+                <input type="number" id="iRate" placeholder="0">
+            </div>
         </div>
-        <button class="btn-print" onclick="printBill()">Print Receipt</button>
+
+        <button class="btn-print" onclick="printBill()">
+            <i class="fas fa-print"></i> Print Receipt
+        </button>
     </div>
 </div>
 
 <script>
+    // Load items from Stock Master when page opens
+    window.onload = function() {
+        const savedItems = JSON.parse(localStorage.getItem('dhara_inventory')) || [];
+        const dropdown = document.getElementById('itemSelect');
+
+        savedItems.forEach(item => {
+            let option = document.createElement('option');
+            option.value = item.name;
+            option.text = item.name;
+            option.dataset.price = item.rate; // Hide the price inside the option
+            dropdown.add(option);
+        });
+    };
+
+    // When you pick an item, automatically show its price
+    function updatePrice() {
+        const dropdown = document.getElementById('itemSelect');
+        const selectedOption = dropdown.options[dropdown.selectedIndex];
+        const priceField = document.getElementById('iRate');
+
+        if (selectedOption.value !== "") {
+            priceField.value = selectedOption.dataset.price;
+        } else {
+            priceField.value = "";
+        }
+    }
+
     function printBill() {
-        const name = document.getElementById('cName').value || "Cash Customer";
-        const item = document.getElementById('iName').value;
+        const customer = document.getElementById('cName').value || "Cash Customer";
+        const item = document.getElementById('itemSelect').value || "General Item";
         const qty = parseFloat(document.getElementById('iQty').value);
         const rate = parseFloat(document.getElementById('iRate').value);
         const total = qty * rate;
 
+        if (isNaN(total) || total <= 0) {
+            alert("Please select an item and enter a valid quantity/rate.");
+            return;
+        }
+
         const win = window.open('', '_blank');
         win.document.write(`
-            <html><body style="font-family:monospace; width:300px; margin:auto; padding:20px; border:1px solid #ddd;">
-                <h2 style="text-align:center">DHARA ENTERPRISE</h2>
-                <hr>
+            <html>
+            <head>
+                <style>
+                    body { font-family: monospace; width: 300px; margin: auto; padding: 20px; border: 1px solid #ddd; color: #333; }
+                    .center { text-align: center; }
+                    .hr { border-bottom: 1px dashed #000; margin: 10px 0; }
+                    .flex { display: flex; justify-content: space-between; }
+                    @media print { .no-print { display: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="center">
+                    <h2 style="margin:0">DHARA ENTERPRISE</h2>
+                    <p style="font-size:12px">Cash Memo</p>
+                </div>
+                <div class="hr"></div>
                 <p>Date: ${new Date().toLocaleDateString()}</p>
-                <p>To: ${name}</p>
-                <hr>
+                <p>Customer: ${customer}</p>
+                <div class="hr"></div>
                 <p><b>${item}</b></p>
-                <p>${qty} x ₹${rate} = <b>₹${total}</b></p>
-                <hr>
-                <h3 style="text-align:right">TOTAL: ₹${total}</h3>
-                <center><button onclick="window.print()">Print</button></center>
-            </body></html>
+                <div class="flex"><span>${qty} x ₹${rate.toLocaleString()}</span><b>₹${total.toLocaleString()}</b></div>
+                <div class="hr"></div>
+                <div class="flex" style="font-size:18px; font-weight:bold;"><span>TOTAL:</span><span>₹${total.toLocaleString()}</span></div>
+                <div class="hr"></div>
+                <div class="center" style="margin-top:30px">
+                    <p>Thank You!</p>
+                    <button class="no-print" onclick="window.print()" style="padding:10px 20px; cursor:pointer;">PRINT</button>
+                </div>
+            </body>
+            </html>
         `);
     }
 </script>
