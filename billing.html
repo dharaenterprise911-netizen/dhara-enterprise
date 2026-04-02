@@ -15,15 +15,23 @@
         .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
         .nav-link.active { background: var(--accent); color: white; }
 
-        .main-content { margin-left: 240px; padding: 40px; width: 100%; display: flex; justify-content: center; }
-        .bill-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 500px; border: 1px solid #e2e8f0; }
+        .main-content { margin-left: 240px; padding: 40px; width: 100%; display: flex; gap: 30px; }
+        .bill-card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 400px; border: 1px solid #e2e8f0; height: fit-content; }
         
-        label { display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 8px; text-transform: uppercase; margin-top: 15px; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; background: #fdfdfd; }
-        input:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .preview-card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); flex: 1; border: 1px solid #e2e8f0; height: fit-content; }
 
-        .btn-print { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; margin-top: 25px; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
-        .btn-print:hover { background: #1d4ed8; transform: translateY(-1px); }
+        label { display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 5px; text-transform: uppercase; margin-top: 15px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 0.95rem; }
+
+        .btn-add { width: 100%; padding: 12px; background: #f1f5f9; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 20px; transition: 0.2s; }
+        .btn-add:hover { background: var(--accent); color: white; }
+
+        .btn-print { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; font-size: 0.8rem; color: #64748b; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        td { padding: 10px 0; border-bottom: 1px solid #f9f9f9; font-size: 0.9rem; }
+        .total-row { font-size: 1.2rem; font-weight: bold; text-align: right; margin-top: 20px; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -36,105 +44,131 @@
 
 <div class="main-content">
     <div class="bill-card">
-        <h2 style="text-align:center; margin-top:0; color: var(--primary);">Quick Receipt</h2>
+        <h3 style="margin-top:0;">Add to Bill</h3>
         
         <label>Customer Name</label>
-        <input type="text" id="cName" placeholder="Enter Client Name">
+        <input type="text" id="cName" placeholder="Client Name">
 
-        <label>Select Saved Item (From Stock Master)</label>
+        <label>Product (from Stock)</label>
         <select id="itemSelect" onchange="updatePrice()">
-            <option value="">-- Choose an Item --</option>
-            </select>
+            <option value="">-- Select Product --</option>
+        </select>
 
-        <div style="display:flex; gap:15px; margin-top:10px;">
-            <div style="flex:1;">
-                <label>Quantity</label>
-                <input type="number" id="iQty" value="1" min="1">
-            </div>
-            <div style="flex:1;">
-                <label>Rate (₹)</label>
-                <input type="number" id="iRate" placeholder="0">
-            </div>
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1;"><label>Qty</label><input type="number" id="iQty" value="1" min="1"></div>
+            <div style="flex:1;"><label>Rate</label><input type="number" id="iRate" placeholder="0"></div>
         </div>
 
-        <button class="btn-print" onclick="printBill()">
-            <i class="fas fa-print"></i> Print Receipt
+        <button class="btn-add" onclick="addItemToBill()">
+            <i class="fas fa-cart-plus"></i> Add Item
         </button>
+
+        <button class="btn-print" onclick="printFinalBill()">
+            <i class="fas fa-print"></i> Generate Bill
+        </button>
+        <button onclick="clearBill()" style="width:100%; background:none; border:none; color:#ef4444; cursor:pointer; margin-top:10px; font-size:0.8rem;">Clear All Items</button>
+    </div>
+
+    <div class="preview-card">
+        <h3 style="margin-top:0;">Live Bill Preview</h3>
+        <p id="displayCustomer" style="color: #64748b; font-weight: 600;">Customer: ---</p>
+        <hr style="border:0; border-top:1px solid #eee;">
+        
+        <table>
+            <thead>
+                <tr><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+            </thead>
+            <tbody id="billItems">
+                </tbody>
+        </table>
+
+        <div class="total-row" id="grandTotalDisplay">Total: ₹0</div>
     </div>
 </div>
 
 <script>
-    // Load items from Stock Master when page opens
+    let currentBill = [];
+
     window.onload = function() {
         const savedItems = JSON.parse(localStorage.getItem('dhara_inventory')) || [];
         const dropdown = document.getElementById('itemSelect');
-
         savedItems.forEach(item => {
-            let option = document.createElement('option');
-            option.value = item.name;
-            option.text = item.name;
-            option.dataset.price = item.rate; // Hide the price inside the option
-            dropdown.add(option);
+            let opt = document.createElement('option');
+            opt.value = item.name; opt.text = item.name; opt.dataset.price = item.rate;
+            dropdown.add(opt);
         });
     };
 
-    // When you pick an item, automatically show its price
     function updatePrice() {
-        const dropdown = document.getElementById('itemSelect');
-        const selectedOption = dropdown.options[dropdown.selectedIndex];
+        const sel = document.getElementById('itemSelect');
         const priceField = document.getElementById('iRate');
-
-        if (selectedOption.value !== "") {
-            priceField.value = selectedOption.dataset.price;
-        } else {
-            priceField.value = "";
-        }
+        priceField.value = sel.options[sel.selectedIndex].dataset.price || "";
     }
 
-    function printBill() {
-        const customer = document.getElementById('cName').value || "Cash Customer";
-        const item = document.getElementById('itemSelect').value || "General Item";
+    function addItemToBill() {
+        const name = document.getElementById('itemSelect').value;
         const qty = parseFloat(document.getElementById('iQty').value);
         const rate = parseFloat(document.getElementById('iRate').value);
-        const total = qty * rate;
+        const customer = document.getElementById('cName').value || "Cash Customer";
 
-        if (isNaN(total) || total <= 0) {
-            alert("Please select an item and enter a valid quantity/rate.");
-            return;
-        }
+        if (!name || isNaN(qty) || isNaN(rate)) { alert("Check item details!"); return; }
+
+        currentBill.push({ name, qty, rate, total: qty * rate });
+        document.getElementById('displayCustomer').innerText = "Customer: " + customer;
+        renderPreview();
+    }
+
+    function renderPreview() {
+        const tbody = document.getElementById('billItems');
+        let gTotal = 0;
+        tbody.innerHTML = '';
+
+        currentBill.forEach(item => {
+            gTotal += item.total;
+            tbody.innerHTML += `<tr><td>${item.name}</td><td>${item.qty}</td><td>₹${item.rate}</td><td>₹${item.total}</td></tr>`;
+        });
+
+        document.getElementById('grandTotalDisplay').innerText = "Total: ₹" + gTotal.toLocaleString();
+    }
+
+    function clearBill() {
+        currentBill = [];
+        renderPreview();
+        document.getElementById('cName').value = '';
+    }
+
+    function printFinalBill() {
+        if (currentBill.length === 0) { alert("Add at least one item!"); return; }
+        
+        const customer = document.getElementById('cName').value || "Cash Customer";
+        let itemsRows = "";
+        let finalGrandTotal = 0;
+
+        currentBill.forEach(item => {
+            finalGrandTotal += item.total;
+            itemsRows += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span>${item.name} (${item.qty} x ${item.rate})</span>
+                            <span>₹${item.total}</span>
+                          </div>`;
+        });
 
         const win = window.open('', '_blank');
         win.document.write(`
-            <html>
-            <head>
-                <style>
-                    body { font-family: monospace; width: 300px; margin: auto; padding: 20px; border: 1px solid #ddd; color: #333; }
-                    .center { text-align: center; }
-                    .hr { border-bottom: 1px dashed #000; margin: 10px 0; }
-                    .flex { display: flex; justify-content: space-between; }
-                    @media print { .no-print { display: none; } }
-                </style>
-            </head>
-            <body>
-                <div class="center">
-                    <h2 style="margin:0">DHARA ENTERPRISE</h2>
-                    <p style="font-size:12px">Cash Memo</p>
+            <html><body style="font-family:monospace; width:300px; margin:auto; padding:20px; border:1px solid #ddd;">
+                <h2 style="text-align:center; margin:0;">DHARA ENTERPRISE</h2>
+                <p style="text-align:center; font-size:10px;">Quick Receipt</p>
+                <hr>
+                <p>Date: ${new Date().toLocaleDateString()}<br>To: ${customer}</p>
+                <hr>
+                ${itemsRows}
+                <hr>
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:16px;">
+                    <span>GRAND TOTAL:</span><span>₹${finalGrandTotal.toLocaleString()}</span>
                 </div>
-                <div class="hr"></div>
-                <p>Date: ${new Date().toLocaleDateString()}</p>
-                <p>Customer: ${customer}</p>
-                <div class="hr"></div>
-                <p><b>${item}</b></p>
-                <div class="flex"><span>${qty} x ₹${rate.toLocaleString()}</span><b>₹${total.toLocaleString()}</b></div>
-                <div class="hr"></div>
-                <div class="flex" style="font-size:18px; font-weight:bold;"><span>TOTAL:</span><span>₹${total.toLocaleString()}</span></div>
-                <div class="hr"></div>
-                <div class="center" style="margin-top:30px">
-                    <p>Thank You!</p>
-                    <button class="no-print" onclick="window.print()" style="padding:10px 20px; cursor:pointer;">PRINT</button>
+                <div style="text-align:center; margin-top:30px;">
+                    <button onclick="window.print()">PRINT RECEIPT</button>
                 </div>
-            </body>
-            </html>
+            </body></html>
         `);
     }
 </script>
